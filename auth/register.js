@@ -18,7 +18,8 @@ async function registerHandler(req, res) {
     }
 
     const { name, email, password } = parsed.data;
-    const normalizedEmail = email.toLowerCase();
+    const normalizedName = name.trim().toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
 
     const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existingUser) {
@@ -30,7 +31,7 @@ async function registerHandler(req, res) {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: {
-        name,
+        name: normalizedName,
         email: normalizedEmail,
         password: hashedPassword,
       },
@@ -38,7 +39,7 @@ async function registerHandler(req, res) {
 
     const token = signJwt({ id: user.id, email: user.email });
 
-    return res.status(201).json({ user: { id: user.id, email: user.email }, token });
+    return res.status(201).json({ user: { id: user.id, email: user.email, name: user.name }, token });
   } catch (err) {
     return res.status(500).json({ error: [{ path: "server", message: "Internal Server Error" }] });
   }

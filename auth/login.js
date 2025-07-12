@@ -32,7 +32,7 @@ async function loginHandler(req, res) {
 
     const token = signJwt({ id: user.id, email: user.email });
 
-    return res.status(200).json({ user: { id: user.id, email: user.email }, token });
+    return res.status(200).json({ user: { id: user.id, email: user.email, name: user.name }, token });
   } catch (err) {
     return res.status(500).json({ error: [{ path: 'server', message: 'Internal Server Error' }] });
   }
