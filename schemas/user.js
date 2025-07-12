@@ -1,17 +1,38 @@
-const { z } = require("zod");
+// user.js
+import { z } from 'zod';
 
-const registerSchema = z.object({
-  name: z.string().min(2, "Name is required"),
-  email: z.email("Invalid email").min(5).max(50),
-  password: z.string().min(6, "Password too short").max(50),
+export const loginSchema = z.object({
+  email: z
+    .string()
+    .nonempty('Email is required')
+    .min(5, 'Email too short')
+    .max(50, 'Email too long'),
+
+  password: z
+    .string()
+    .nonempty('Password is required')
+    .min(6, 'Password too short')
+    .max(50, 'Password too long')
+    .regex(/^[a-zA-Z0-9]*$/, 'Password must be alphanumeric'),
 });
 
-const loginSchema = z.object({
-  email: z.email("Invalid email"),
-  password: z.string().min(6, "Password too short"),
-});
+export const registerSchema = z.object({
+  name: z
+    .string()
+    .nonempty('Name is required')
+    .min(2, 'Name is too short')
+    .max(50, 'Name too long'),
 
-module.exports = {
-  registerSchema,
-  loginSchema,
-};
+  email: z
+    .nonempty('Email is required')
+    .email('Invalid email')
+    .min(5, 'Email too short')
+    .max(50, 'Email too long'),
+
+  password: z
+    .string()
+    .nonempty('Password is required')
+    .min(6, 'Password too short')
+    .max(50, 'Password too long')
+    .regex(/^[a-zA-Z0-9]*$/, 'Password must be alphanumeric'),
+});

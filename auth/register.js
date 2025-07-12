@@ -7,8 +7,6 @@ const { signJwt } = require("../lib/jwt");
 const prisma = new PrismaClient();
 
 async function registerHandler(req, res) {
-  console.log("[REGISTER] Request received", req.body);
-
   try {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -16,7 +14,6 @@ async function registerHandler(req, res) {
         path: issue.path.join("."),
         message: issue.message,
       }));
-      console.error("[REGISTER] Validation errors:", errorList);
       return res.status(400).json({ error: errorList });
     }
 
@@ -25,8 +22,9 @@ async function registerHandler(req, res) {
 
     const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existingUser) {
-      console.warn("[REGISTER] Email already in use:", normalizedEmail);
-      return res.status(400).json({ error: "Email already in use" });
+      return res.status(400).json({
+        error: [{ path: "email", message: "Email already in use" }],
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -39,12 +37,10 @@ async function registerHandler(req, res) {
     });
 
     const token = signJwt({ id: user.id, email: user.email });
-    console.log("[REGISTER] Success for:", user.email);
 
     return res.status(201).json({ user: { id: user.id, email: user.email }, token });
   } catch (err) {
-    console.error("[REGISTER] Internal error:", err);
-    return res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json({ error: [{ path: "server", message: "Internal Server Error" }] });
   }
 }
 
