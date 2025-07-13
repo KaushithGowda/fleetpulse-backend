@@ -1,4 +1,3 @@
-// user.js
 const { z } = require("zod");
 
 const loginSchema = z.object({
@@ -34,5 +33,5 @@ const registerSchema = z.object({
 
 module.exports = {
   loginSchema,
-  registerSchema,
+  registerSchema
 };
