@@ -1,6 +1,6 @@
 const { z } = require("zod");
 
-export const companySchema = z.object({
+const companySchema = z.object({
   name: z
     .string()
     .nonempty('Company name is required')

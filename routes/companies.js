@@ -6,11 +6,18 @@ const { requireAuth } = require("../middleware/auth");
 
 const prisma = new PrismaClient();
 
+// Helper to format Zod errors
+const formatZodErrors = (issues) =>
+  issues.map((issue) => ({
+    path: issue.path.join("."),
+    message: issue.message,
+  }));
+
 // Create Company
 router.post("/", requireAuth, async (req, res) => {
   const parsed = companySchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return res.status(400).json({ error: formatZodErrors(parsed.error.issues) });
   }
 
   try {
@@ -22,10 +29,10 @@ router.post("/", requireAuth, async (req, res) => {
       },
     });
 
-    res.status(201).json(company);
+    return res.status(201).json(company);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Could not create company" });
+    console.error("[Create Company Error]", err);
+    return res.status(500).json({ error: [{ path: "server", message: "Could not create company" }] });
   }
 });
 
@@ -33,46 +40,40 @@ router.post("/", requireAuth, async (req, res) => {
 router.get("/", requireAuth, async (req, res) => {
   const { search = "", limit = 10, offset = 0 } = req.query;
 
+  const whereClause = {
+    userId: req.user.id,
+    ...(search && {
+      OR: [
+        { companyName: { contains: search, mode: "insensitive" } },
+        { website: { contains: search, mode: "insensitive" } },
+        { primaryFirstName: { contains: search, mode: "insensitive" } },
+        { primaryLastName: { contains: search, mode: "insensitive" } },
+        { primaryEmail: { contains: search, mode: "insensitive" } },
+        { primaryMobile: { contains: search, mode: "insensitive" } },
+        { registrationNumber: { contains: search, mode: "insensitive" } },
+        { country: { contains: search, mode: "insensitive" } },
+        { state: { contains: search, mode: "insensitive" } },
+        { city: { contains: search, mode: "insensitive" } },
+        { zipCode: { contains: search, mode: "insensitive" } },
+      ],
+    }),
+  };
+
   try {
-    const companies = await prisma.company.findMany({
-      where: {
-        userId: req.user.id,
-        ...(search && {
-          OR: [
-            { name: { contains: search, mode: "insensitive" } },
-            { city: { contains: search, mode: "insensitive" } },
-            { state: { contains: search, mode: "insensitive" } },
-            { contactEmail: { contains: search, mode: "insensitive" } },
-            { contactMobile: { contains: search, mode: "insensitive" } },
-            { registrationNumber: { contains: search, mode: "insensitive" } },
-          ],
-        }),
-      },
-      skip: Number(offset),
-      take: Number(limit),
-      orderBy: { createdAt: "desc" },
-    });
+    const [companies, total] = await Promise.all([
+      prisma.company.findMany({
+        where: whereClause,
+        skip: Number(offset),
+        take: Number(limit),
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.company.count({ where: whereClause }),
+    ]);
 
-    const total = await prisma.company.count({
-      where: {
-        userId: req.user.id,
-        ...(search && {
-          OR: [
-            { name: { contains: search, mode: "insensitive" } },
-            { city: { contains: search, mode: "insensitive" } },
-            { state: { contains: search, mode: "insensitive" } },
-            { contactEmail: { contains: search, mode: "insensitive" } },
-            { contactMobile: { contains: search, mode: "insensitive" } },
-            { registrationNumber: { contains: search, mode: "insensitive" } },
-          ],
-        }),
-      },
-    });
-
-    res.json({ data: companies, total });
+    return res.status(200).json({ data: companies, total });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch companies" });
+    console.error("[Get Companies Error]", err);
+    return res.status(500).json({ error: [{ path: "server", message: "Failed to fetch companies" }] });
   }
 });
 
@@ -80,16 +81,13 @@ router.get("/", requireAuth, async (req, res) => {
 router.put("/:id", requireAuth, async (req, res) => {
   const parsed = companySchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+    return res.status(400).json({ error: formatZodErrors(parsed.error.issues) });
   }
 
   try {
-    const existing = await prisma.company.findUnique({
-      where: { id: req.params.id },
-    });
-
+    const existing = await prisma.company.findUnique({ where: { id: req.params.id } });
     if (!existing || existing.userId !== req.user.id) {
-      return res.status(404).json({ error: "Company not found or unauthorized" });
+      return res.status(404).json({ error: [{ path: "company", message: "Company not found or unauthorized" }] });
     }
 
     const company = await prisma.company.update({
@@ -100,32 +98,27 @@ router.put("/:id", requireAuth, async (req, res) => {
       },
     });
 
-    res.json(company);
+    return res.status(200).json(company);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Could not update company" });
+    console.error("[Update Company Error]", err);
+    return res.status(500).json({ error: [{ path: "server", message: "Could not update company" }] });
   }
 });
 
 // Delete Company
 router.delete("/:id", requireAuth, async (req, res) => {
   try {
-    const existing = await prisma.company.findUnique({
-      where: { id: req.params.id },
-    });
-
+    const existing = await prisma.company.findUnique({ where: { id: req.params.id } });
     if (!existing || existing.userId !== req.user.id) {
-      return res.status(404).json({ error: "Company not found or unauthorized" });
+      return res.status(404).json({ error: [{ path: "company", message: "Company not found or unauthorized" }] });
     }
 
-    const deleted = await prisma.company.delete({
-      where: { id: req.params.id },
-    });
+    await prisma.company.delete({ where: { id: req.params.id } });
 
-    res.json({ success: true, message: "Company deleted", deleted });
+    return res.status(200).json({ message: "Company deleted successfully" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Could not delete company" });
+    console.error("[Delete Company Error]", err);
+    return res.status(500).json({ error: [{ path: "server", message: "Could not delete company" }] });
   }
 });
 
