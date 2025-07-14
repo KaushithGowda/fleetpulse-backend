@@ -20,6 +20,28 @@ router.post("/", requireAuth, async (req, res) => {
     return res.status(400).json({ error: formatZodErrors(parsed.error.issues) });
   }
 
+  const existingEmail = await prisma.driver.findFirst({
+    where: {
+      email: parsed.data.email,
+      userId: req.user.id,
+    },
+  });
+
+  if (existingEmail) {
+    return res.status(400).json({ error: [{ path: "email", message: "Email already exists" }] });
+  }
+
+  const existingLicense = await prisma.driver.findFirst({
+    where: {
+      licenseNumber: parsed.data.licenseNumber,
+      userId: req.user.id,
+    },
+  });
+
+  if (existingLicense) {
+    return res.status(400).json({ error: [{ path: "licenseNumber", message: "License number already exists" }] });
+  }
+
   try {
     const driver = await prisma.driver.create({
       data: {
@@ -85,6 +107,30 @@ router.put("/:id", requireAuth, async (req, res) => {
     const existing = await prisma.driver.findUnique({ where: { id: req.params.id } });
     if (!existing || existing.userId !== req.user.id) {
       return res.status(404).json({ error: [{ path: "driver", message: "Driver not found or unauthorized" }] });
+    }
+
+    const duplicateEmail = await prisma.driver.findFirst({
+      where: {
+        email: parsed.data.email,
+        userId: req.user.id,
+        NOT: { id: req.params.id },
+      },
+    });
+
+    if (duplicateEmail) {
+      return res.status(400).json({ error: [{ path: "email", message: "Email already exists" }] });
+    }
+
+    const duplicateLicense = await prisma.driver.findFirst({
+      where: {
+        licenseNumber: parsed.data.licenseNumber,
+        userId: req.user.id,
+        NOT: { id: req.params.id },
+      },
+    });
+
+    if (duplicateLicense) {
+      return res.status(400).json({ error: [{ path: "licenseNumber", message: "License number already exists" }] });
     }
 
     const driver = await prisma.driver.update({

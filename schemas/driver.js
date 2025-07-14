@@ -1,6 +1,10 @@
 const { z } = require("zod");
 
 const driverSchema = z.object({
+  id: z
+    .string()
+    .optional(),
+
   firstName: z
     .string()
     .min(2, 'First name is required')
@@ -14,25 +18,28 @@ const driverSchema = z.object({
   email: z
     .email('Invalid email')
     .min(5, 'Email too short')
-    .max(20, 'Email too long'),
+    .max(50, 'Email too long'),
 
   mobile: z
     .string()
-    .min(10, 'Invalid mobile number')
-    .max(10, 'Invalid mobile number'),
+    .nonempty('Phone number is required')
+    .min(10, 'Phone number must 10 charactes')
+    .max(10, 'Phone number must 10 charactes')
+    .regex(/^\d{10}$/, 'Invalid mobile number'),
 
   dateOfBirth: z
     .string()
-    .min(1, 'Date of birth is required'),
+    .refine(val => !isNaN(Date.parse(val)), 'Invalid date'),
 
   licenseNumber: z
     .string()
-    .min(2, 'License number is required')
+    .min(2, 'License Number is required')
     .max(20, 'Too long'),
 
-  experience: z
+  licenseStartDate: z
     .string()
-    .min(1, 'Experience is required'),
+    .nonempty('License Issue Date is required')
+    .refine(val => !isNaN(Date.parse(val)), 'Invalid date'),
 
   address1: z
     .string()
@@ -60,7 +67,8 @@ const driverSchema = z.object({
 
   zipCode: z
     .string()
-    .min(1, 'Zip Code is required'),
+    .min(1, 'Zip Code is required')
+    .max(7, 'Too long'),
 });
 
 module.exports = {

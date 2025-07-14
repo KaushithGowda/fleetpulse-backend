@@ -20,6 +20,17 @@ router.post("/", requireAuth, async (req, res) => {
     return res.status(400).json({ error: formatZodErrors(parsed.error.issues) });
   }
 
+  const existingReg = await prisma.company.findFirst({
+    where: {
+      registrationNumber: parsed.data.registrationNumber,
+      userId: req.user.id,
+    },
+  });
+
+  if (existingReg) {
+    return res.status(400).json({ error: [{ path: "registrationNumber", message: "Registration number already exists" }] });
+  }
+
   try {
     const company = await prisma.company.create({
       data: {
@@ -88,6 +99,18 @@ router.put("/:id", requireAuth, async (req, res) => {
     const existing = await prisma.company.findUnique({ where: { id: req.params.id } });
     if (!existing || existing.userId !== req.user.id) {
       return res.status(404).json({ error: [{ path: "company", message: "Company not found or unauthorized" }] });
+    }
+
+    const duplicateReg = await prisma.company.findFirst({
+      where: {
+        registrationNumber: parsed.data.registrationNumber,
+        userId: req.user.id,
+        NOT: { id: req.params.id },
+      },
+    });
+
+    if (duplicateReg) {
+      return res.status(400).json({ error: [{ path: "registrationNumber", message: "Registration number already exists" }] });
     }
 
     const company = await prisma.company.update({
