@@ -52,7 +52,7 @@ router.get("/", requireAuth, async (req, res) => {
   const { search = "", limit = 10, offset = 0 } = req.query;
 
   const whereClause = {
-    userId: req.user.id,
+    // userId: req.user.id,
     ...(search && {
       OR: [
         { companyName: { contains: search, mode: "insensitive" } },
