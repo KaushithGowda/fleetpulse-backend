@@ -20,16 +20,21 @@ router.post("/", requireAuth, async (req, res) => {
     return res.status(400).json({ error: formatZodErrors(parsed.error.issues) });
   }
 
-  const existingEmail = await prisma.driver.findFirst({
-    where: {
-      email: parsed.data.email,
-      userId: req.user.id,
-    },
-  });
-
-  if (existingEmail) {
-    return res.status(400).json({ error: [{ path: "email", message: "Email already exists" }] });
+  try {
+    const existingEmail = await prisma.driver.findFirst({
+      where: {
+        email: parsed.data.email,
+        userId: req.user.id,
+      },
+    });
+    
+    if (existingEmail) {
+      return res.status(400).json({ error: [{ path: "email", message: "Email already exists" }] });
+    }
+  } catch (error) {
+    console.log(error);
   }
+
 
   const existingLicense = await prisma.driver.findFirst({
     where: {
